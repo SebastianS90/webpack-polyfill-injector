@@ -1,0 +1,28 @@
+{
+  "name": "webpack-polyfill-injector",
+  "version": "0.0.1",
+  "description": "Webpack plugin to automatically inject polyfills into your bundle",
+  "keywords": [
+    "webpack",
+    "polyfill"
+  ],
+  "main": "src/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SebastianS90/webpack-polyfill-injector"
+  },
+  "author": "Sebastian Schweizer",
+  "license": "MIT",
+  "scripts": {
+    "eslint": "node node_modules/eslint/bin/eslint.js --color --format codeframe --ignore-pattern '!.*' --ignore-pattern 'src/injector.js' ."
+  },
+  "dependencies": {
+    "loader-utils": "^1.0.2",
+    "lodash": "^4.0.0",
+    "polyfill-service": "^3.16.0",
+    "webpack-sources": "^0.1.4"
+  },
+  "devDependencies": {
+    "eslint": "^3.14.0"
+  }
+}

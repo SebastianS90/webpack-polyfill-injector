@@ -1,0 +1,11 @@
+language: node_js
+
+node_js:
+  - "7"
+  - "6"
+
+cache:
+  - yarn: true
+
+script:
+  - yarn run eslint
