@@ -77,7 +77,7 @@ If any specified polyfill is required, then the browser will load
 Note that `polyfill.io` only sends those polyfills that are required by the requesting browser.
 
 ### Use your own `polyfill-service` installation
-If want to use the benefits of only sending required polyfills but do not like to load scripts from the `polyfill.io` CDN, then you can use your own installation of `polyfill-service`:
+If you want to benefit from only sending required polyfills but do not like to load scripts from the `polyfill.io` CDN, then you can use your own installation of `polyfill-service`:
 
 ```javascript
 new PolyfillInjectorPlugin({
@@ -85,7 +85,7 @@ new PolyfillInjectorPlugin({
     'Promise',
     'Array.prototype.find',
   ],
-  service: 'https://static.mydomain.example/js/polyfills.js',
+  service: 'https://scripts.mydomain.example/polyfills.min.js',
 })
 ```
 
@@ -122,7 +122,7 @@ The plugin wraps all entry chunks as follows:
     main();
   }
 }) (function() {
-// your entry chunk goes here...
+// your entry chunk (i.e. the original asset content) goes here...
 });
 ```
 

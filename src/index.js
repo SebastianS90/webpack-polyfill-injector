@@ -94,7 +94,10 @@ PolyfillInjectorPlugin.prototype.apply = function apply(compiler) {
                 ]).reduce((concatSource, entry) => {
                     concatSource.add(entry);
                     return concatSource;
-                }, new ConcatSource())
+                }, new ConcatSource(
+                    '/*! For detailed credits and licence information see ' +
+                    'https://github.com/financial-times/polyfill-service. */\n'
+                ))
             );
             content.__PolyfillInjectorPlugin = true;
 
