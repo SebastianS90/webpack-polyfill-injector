@@ -1,6 +1,6 @@
 /* Polyfill Injector */
 (function(main) {
-    if(true || __TEST__) {
+    if(__TEST__) {
         var js = document.createElement('script');
         js.src = __SRC__;
         js.onload = main;
