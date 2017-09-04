@@ -21,6 +21,8 @@ or
 npm install webpack-polyfill-injector --save-dev
 ```
 
+**Please note:** Due to its dependency on `polyfill-service`, this package pulls in a lot of additional packages on installation.
+
 
 ## Usage
 ```javascript
