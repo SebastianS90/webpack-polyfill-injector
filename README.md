@@ -102,7 +102,7 @@ new PolyfillInjectorPlugin({
     'Promise',
     'Array.prototype.find',
   ],
-  service: 'https://static.mydomain.example/js/polyfills.js',
+  src: 'https://static.mydomain.example/js/polyfills.js',
 })
 ```
 
