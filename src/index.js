@@ -71,7 +71,7 @@ function buildInjector(polyfills, src) {
 }
 
 PolyfillInjectorPlugin.prototype.apply = function apply(compiler) {
-    compiler.plugin('compilation', (compilation) => {
+    compiler.plugin('this-compilation', (compilation) => {
         let src = '';
         if (this.service) {
             src = this.src + '?features=' + this.polyfills
