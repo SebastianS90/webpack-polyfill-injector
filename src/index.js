@@ -88,7 +88,9 @@ PolyfillInjectorPlugin.prototype.apply = function apply(compiler) {
                     ')) {\n',
                     new PrefixSource(
                         '\t',
-                        loadFileAsSource(`polyfill-service/polyfills/${polyfill}/polyfill.js`)
+                        loadFileAsSource(`polyfill-service/polyfills/__dist/${
+                            polyfill.replace(/\//g, '.')
+                        }/raw.js`)
                     ),
                     '\n}\n\n',
                 ]).reduce((concatSource, entry) => {
