@@ -2,7 +2,7 @@ module.exports = {
     extends: 'eslint:recommended',
 
     parserOptions: {
-        ecmaVersion: 6,
+        ecmaVersion: 2017,
         sourceType: 'module',
         ecmaFeatures: {
             impliedStrict: true,
