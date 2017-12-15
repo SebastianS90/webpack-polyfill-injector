@@ -3,7 +3,7 @@ const
     loaderUtils = require('loader-utils'),
     CachedSource = require('webpack-sources').CachedSource,
     ReplaceSource = require('webpack-sources').ReplaceSource,
-    {getLoaderOptions, loadFileAsSource, loadPolyfillDetector} = require('./helpers.js');
+    {getLoaderOptions, loadFileAsSource} = require('./helpers.js');
 
 module.exports = function loader(content, map, meta) {
     // Object shared with the plugin
@@ -28,7 +28,7 @@ module.exports = function loader(content, map, meta) {
             Promise.all(
                 // Load all detectors
                 polyfills.map(
-                    polyfill => loadPolyfillDetector(polyfill)
+                    polyfill => pluginState.getPolyfillDetector(polyfill)
                 ).concat(
                     // and the injector template
                     loadFileAsSource(

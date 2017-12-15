@@ -56,29 +56,9 @@ function loadFileAsSource(file) {
         ));
 }
 
-function loadPolyfillSource(polyfill) {
-    return loadFileAsSource(
-        require.resolve(`polyfill-service/polyfills/__dist/${polyfill}/raw.js`)
-    );
-}
-
-function loadPolyfillMeta(polyfill) {
-    return loadFileAsString(
-        require.resolve(`polyfill-service/polyfills/__dist/${polyfill}/meta.json`)
-    ).then(data => JSON.parse(data));
-}
-
-function loadPolyfillDetector(polyfill) {
-    return loadPolyfillMeta(polyfill)
-        .then(meta => meta.detectionSource);
-}
-
 module.exports = {
     getLoaderOptions,
     concatSources,
     loadFileAsString,
     loadFileAsSource,
-    loadPolyfillSource,
-    loadPolyfillMeta,
-    loadPolyfillDetector,
 };

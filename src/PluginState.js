@@ -1,7 +1,7 @@
 /* global Promise */
 const
     loaderUtils = require('loader-utils'),
-    {concatSources, loadPolyfillSource, loadPolyfillDetector} = require('./helpers.js');
+    {concatSources, loadFileAsString, loadFileAsSource} = require('./helpers.js');
 
 class PluginState {
     constructor(compilation, options) {
@@ -68,6 +68,23 @@ function loadCache(key, cache, loader) {
     } catch (e) {
         return cache[key] = Promise.reject(e);
     }
+}
+
+function loadPolyfillSource(polyfill) {
+    return loadFileAsSource(
+        require.resolve(`polyfill-service/polyfills/__dist/${polyfill}/raw.js`)
+    );
+}
+
+function loadPolyfillMeta(polyfill) {
+    return loadFileAsString(
+        require.resolve(`polyfill-service/polyfills/__dist/${polyfill}/meta.json`)
+    ).then(data => JSON.parse(data));
+}
+
+function loadPolyfillDetector(polyfill) {
+    return loadPolyfillMeta(polyfill)
+        .then(meta => meta.detectSource);
 }
 
 module.exports = PluginState;
