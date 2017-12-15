@@ -11,6 +11,7 @@ module.exports = function loader(content, map, meta) {
         throw new Error('[webpack-polyfill-injector] The loader must be used together with the plugin!');
     }
     const pluginState = this._compilation.__POLYFILL_INJECTOR;
+    pluginState.hasLoader = true;
 
     // Options
     const options = getLoaderOptions(pluginState, loaderUtils.getOptions(this));

@@ -18,41 +18,44 @@ class PolyfillInjectorPlugin {
             compilation.__POLYFILL_INJECTOR = pluginState;
 
             compilation.plugin('additional-assets', (callback) => {
+                if (!pluginState.hasLoader) {
+                    callback(new Error('[webpack-polyfill-injector] The plugin must be used together with the loader!'));
+                    return;
+                }
+
                 // Get all chunks that contain modules from our loader
                 const chunksWithSingleInjector = {};
                 const chunksWithMultiInjector = {};
-                let foundLoader = false;
-                const loaderPrefix = require.resolve('./loader.js') + '?';
-                compilation.chunks.forEach((chunk) => {
-                    chunk.forEachModule((module) => {
-                        if (module.request) {
-                            module.request.split('!').forEach((request) => {
-                                if (request.startsWith(loaderPrefix)) {
-                                    const options = getLoaderOptions(
-                                        pluginState,
-                                        loaderUtils.parseQuery(request.substr(loaderPrefix.length - 1))
-                                    );
-                                    const encoded = JSON.stringify(options.polyfills);
-                                    const store = options.singleFile
-                                        ? chunksWithSingleInjector
-                                        : chunksWithMultiInjector;
-                                    if (Object.prototype.hasOwnProperty.call(store, encoded)) {
-                                        if (!store[encoded].includes(chunk)) {
-                                            store[encoded].push(chunk);
+                try {
+                    const loaderPrefix = require.resolve('./loader.js') + '?';
+                    compilation.chunks.forEach((chunk) => {
+                        chunk.forEachModule((module) => {
+                            if (module.request) {
+                                module.request.split('!').forEach((request) => {
+                                    if (request.startsWith(loaderPrefix)) {
+                                        const options = getLoaderOptions(
+                                            pluginState,
+                                            loaderUtils.parseQuery(request.substr(loaderPrefix.length - 1))
+                                        );
+                                        const encoded = JSON.stringify(options.polyfills);
+                                        const store = options.singleFile
+                                            ? chunksWithSingleInjector
+                                            : chunksWithMultiInjector;
+                                        if (Object.prototype.hasOwnProperty.call(store, encoded)) {
+                                            if (!store[encoded].includes(chunk)) {
+                                                store[encoded].push(chunk);
+                                            }
+                                        } else {
+                                            store[encoded] = [chunk];
                                         }
-                                    } else {
-                                        store[encoded] = [chunk];
                                     }
-                                    foundLoader = true;
-                                }
-                            });
-                        }
+                                });
+                            }
+                        });
                     });
-                });
-                if (!foundLoader) {
-                    throw new Error(
-                        '[webpack-polyfill-injector] The plugin must be used together with the loader!'
-                    );
+                } catch (err) {
+                    callback(err);
+                    return;
                 }
 
                 // Create the additional assets
