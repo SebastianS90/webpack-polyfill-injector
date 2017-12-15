@@ -14,10 +14,16 @@ function getLoaderOptions(pluginState, loaderOptions) {
         loaderOptions
     );
 
-    if (!Array.isArray(options.polyfills) || options.polyfills.length === 0 ||
-        !Array.isArray(options.modules) || options.modules.length === 0
-    ) {
-        throw new Error('[webpack-polyfill-injector] You need to specify non-empty arrays for the `polyfills` and `modules` options!');
+    if (typeof options.modules === 'string') {
+        options.modules = [options.modules];
+    } else if (!Array.isArray(options.modules) || options.modules.length === 0) {
+        throw new Error('[webpack-polyfill-injector] You need to specify the `modules` option!');
+    }
+
+    if (typeof options.polyfills === 'string') {
+        options.modules = [options.polyfills];
+    } else if (!Array.isArray(options.polyfills) || options.polyfills.length === 0) {
+        throw new Error('[webpack-polyfill-injector] You need to specify the `polyfills` option!');
     }
 
     if (options.polyfills.length === 1) {
