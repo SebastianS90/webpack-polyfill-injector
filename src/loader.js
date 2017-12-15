@@ -43,8 +43,8 @@ module.exports = function loader(content, map, meta) {
                 const vars = {
                     __MAIN__: modules.map(module => `\n    require(${loaderUtils.stringifyRequest(this, module)});`).join('') + '\n',
                     __TESTS__: options.singleFile
-                        ? polyfills.map((polyfill, i) => `\n    /* ${polyfill} */ !(${polyfillTests[i]})`).join(' ||') + '\n'
-                        : polyfills.map((polyfill, i) => `\n    /* ${polyfill} */ (${polyfillTests[i]}) ? 0 : 1`).join(',') + '\n',
+                        ? polyfills.map((polyfill, i) => `/* ${polyfill} */ !(${polyfillTests[i]})`).join(' ||\n        ')
+                        : polyfills.map((polyfill, i) => `\n        /* ${polyfill} */ (${polyfillTests[i]}) ? 0 : 1`).join(',') + '\n    ',
                     __SRC__: JSON.stringify(pluginState.publicPath + (
                         options.singleFile
                             ? outputFilename

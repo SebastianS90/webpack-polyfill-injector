@@ -1,6 +1,8 @@
 // Webpack Polyfill Injector
 function main() {__MAIN__}
-if (__TESTS__) {
+if (function() {
+    return __TESTS__;
+}.call(window)) {
     var js = document.createElement('script');
     js.src = __SRC__;
     js.onload = main;

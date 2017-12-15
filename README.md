@@ -112,10 +112,12 @@ function main() {
     require('./your/first/module/for/this/entry.js');
     require('./your/second/module/for/this/entry.js');
 }
-var polyfills = [
-    /* Promise */ ('Promise' in this) ? 0 : 1,
-    /* Array.prototype.find */ ('find' in Array.prototype) ? 0 : 1
-];
+var polyfills = function() {
+    return [
+        /* Promise */ ('Promise' in this) ? 0 : 1,
+        /* Array.prototype.find */ ('find' in Array.prototype) ? 0 : 1
+    ];
+}.call(window);
 if (polyfills.indexOf(1) === -1) {
     main();
 } else {
@@ -138,9 +140,10 @@ function main() {
     require('./your/first/module/for/this/entry.js');
     require('./your/second/module/for/this/entry.js');
 }
-if (/* Promise */ !('Promise' in this) ||
-    /* Array.prototype.find */ !('find' in Array.prototype)
-) {
+if (function() {
+    return /* Promise */ !('Promise' in this) ||
+        /* Array.prototype.find */ !('find' in Array.prototype);
+}.call(window)) {
     var js = document.createElement('script');
     js.src = "/js/polyfills.js";
     js.onload = main;
@@ -152,6 +155,9 @@ if (/* Promise */ !('Promise' in this) ||
     main();
 }
 ```
+
+Note that in both cases, the detectors are wrapped in a function which is bound to `window`.
+This is due to some detectors using `this` instead of `window`, e.g. `Promise` tests `'Promise' in this`.
 
 
 [npm]: https://img.shields.io/npm/v/webpack-polyfill-injector.svg

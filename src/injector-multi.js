@@ -1,6 +1,8 @@
 // Webpack Polyfill Injector
 function main() {__MAIN__}
-var polyfills = [__TESTS__];
+var polyfills = function() {
+    return [__TESTS__];
+}.call(window);
 if (polyfills.indexOf(1) === -1) {
     main();
 } else {
