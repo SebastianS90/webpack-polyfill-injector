@@ -9,3 +9,4 @@ cache:
 
 script:
   - yarn run eslint
+  - yarn run test
