@@ -10,10 +10,10 @@ module.exports = async function loader(content, map, meta) {
     const callback = this.async();
     try {
         // Object shared with the plugin
-        if (!Object.prototype.hasOwnProperty.call(this._compilation, '__POLYFILL_INJECTOR')) {
+        if (!Object.prototype.hasOwnProperty.call(this._compilation, '__WebpackPolyfillInjector')) {
             throw new Error('[webpack-polyfill-injector] The loader must be used together with the plugin!');
         }
-        const pluginState = this._compilation.__POLYFILL_INJECTOR;
+        const pluginState = this._compilation.__WebpackPolyfillInjector;
         pluginState.hasLoader = true;
 
         // Options

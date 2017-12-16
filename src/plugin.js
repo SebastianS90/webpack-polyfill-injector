@@ -13,12 +13,22 @@ class PolyfillInjectorPlugin {
     }
 
     apply(compiler) {
+        compiler.plugin('invalid', () => {
+            compiler.__WebpackPolyfillInjectorInWatchRun = true;
+        });
+
         compiler.plugin('this-compilation', (compilation) => {
             const pluginState = new PluginState(compilation, this.options);
-            compilation.__POLYFILL_INJECTOR = pluginState;
+            compilation.__WebpackPolyfillInjector = pluginState;
 
             compilation.plugin('additional-assets', async (callback) => {
                 try {
+                    if (compiler.__WebpackPolyfillInjectorInWatchRun) {
+                        // Nothing to do for successive compilations
+                        callback();
+                        return;
+                    }
+
                     if (!pluginState.hasLoader) {
                         throw new Error('[webpack-polyfill-injector] The plugin must be used together with the loader!');
                     }
