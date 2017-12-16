@@ -5,68 +5,64 @@ const
     ReplaceSource = require('webpack-sources').ReplaceSource,
     {getLoaderOptions, loadFileAsSource} = require('./helpers.js');
 
-module.exports = function loader(content, map, meta) {
-    // Object shared with the plugin
-    if (!Object.prototype.hasOwnProperty.call(this._compilation, '__POLYFILL_INJECTOR')) {
-        throw new Error('[webpack-polyfill-injector] The loader must be used together with the plugin!');
-    }
-    const pluginState = this._compilation.__POLYFILL_INJECTOR;
-    pluginState.hasLoader = true;
-
-    // Options
-    const options = getLoaderOptions(pluginState, loaderUtils.getOptions(this));
-    const polyfills = options.polyfills;
-    const modules = options.modules;
-
-    // Loader settings
+module.exports = async function loader(content, map, meta) {
     this.cacheable();
-    const loaderCallback = this.async();
+    const callback = this.async();
+    try {
+        // Object shared with the plugin
+        if (!Object.prototype.hasOwnProperty.call(this._compilation, '__POLYFILL_INJECTOR')) {
+            throw new Error('[webpack-polyfill-injector] The loader must be used together with the plugin!');
+        }
+        const pluginState = this._compilation.__POLYFILL_INJECTOR;
+        pluginState.hasLoader = true;
 
-    // Start doing the work...
-    pluginState
-        .addPolyfills(options)
-        .then(outputFilename =>
-            Promise.all(
-                // Load all detectors
-                polyfills.map(
-                    polyfill => pluginState.getPolyfillDetector(polyfill)
-                ).concat(
-                    // and the injector template
-                    loadFileAsSource(
-                        require.resolve(`./injector-${options.singleFile ? 'single' : 'multi'}.js`)
-                    )
-                )
-            ).then((polyfillTests) => {
-                // The injector template is the last element of that array
-                const injectorRaw = polyfillTests.splice(polyfills.length)[0];
+        // Options
+        const options = getLoaderOptions(pluginState, loaderUtils.getOptions(this));
+        const polyfills = options.polyfills;
 
-                // Construct the main module
-                const vars = {
-                    __MAIN__: modules.map(module => `\n    require(${loaderUtils.stringifyRequest(this, module)});`).join('') + '\n',
-                    __TESTS__: options.singleFile
-                        ? polyfills.map((polyfill, i) => `/* ${polyfill} */ !(${polyfillTests[i]})`).join(' ||\n        ')
-                        : polyfills.map((polyfill, i) => `\n        /* ${polyfill} */ (${polyfillTests[i]}) ? 0 : 1`).join(',') + '\n    ',
-                    __SRC__: JSON.stringify(pluginState.publicPath + (
-                        options.singleFile
-                            ? outputFilename
-                            : outputFilename.replace(/\.js$/, '.') // xxxx.js appended dynamically by injector
-                    )),
-                };
-                const injector = new ReplaceSource(injectorRaw);
-                for (const key in vars) {
-                    if (Object.prototype.hasOwnProperty.call(vars, key)) {
-                        const pos = injectorRaw.source().indexOf(key);
-                        injector.replace(pos, pos + key.length - 1, vars[key]);
-                    }
-                }
-                return new CachedSource(injector);
-            })
-        ).then(
-            (source) => {
-                loaderCallback(null, source.source(), source.map());
-            },
-            (error) => {
-                loaderCallback(error);
-            }
+        // Collect all tasks that will be run concurrently.
+        const tasks = polyfills.map(
+            polyfill => pluginState.getPolyfillDetector(polyfill)
+        ); // -> detectors
+        tasks.push(pluginState.addPolyfills(options)); // -> outputFilename
+        tasks.push(loadFileAsSource(
+            require.resolve(`./injector-${options.singleFile ? 'single' : 'multi'}.js`)
+        )); // -> template
+
+        // Run all tasks and save the results
+        const detectors = await Promise.all(tasks);
+        const [outputFilename, template] = detectors.splice(polyfills.length, 2);
+
+        // Construct the main module
+        const source = constructMainModule(
+            options.modules, polyfills, detectors,
+            template, outputFilename, options.singleFile,
+            this, pluginState
         );
+        callback(null, source.source(), source.map()); // eslint-disable-line callback-return
+    } catch (error) {
+        callback(error); // eslint-disable-line callback-return
+    }
 };
+
+function constructMainModule(modules, polyfills, detectors, template, outputFilename, singleFile, loaderContext, pluginState) {
+    const vars = {
+        __MAIN__: modules.map(module => `\n    require(${loaderUtils.stringifyRequest(loaderContext, module)});`).join('') + '\n',
+        __TESTS__: singleFile
+            ? polyfills.map((polyfill, i) => `/* ${polyfill} */ !(${detectors[i]})`).join(' ||\n        ')
+            : polyfills.map((polyfill, i) => `\n        /* ${polyfill} */ (${detectors[i]}) ? 0 : 1`).join(',') + '\n    ',
+        __SRC__: JSON.stringify(pluginState.publicPath + (
+            singleFile
+                ? outputFilename
+                : outputFilename.replace(/\.js$/, '.') // xxxx.js appended dynamically by injector
+        )),
+    };
+    const injector = new ReplaceSource(template);
+    for (const key in vars) {
+        if (Object.prototype.hasOwnProperty.call(vars, key)) {
+            const pos = template.source().indexOf(key);
+            injector.replace(pos, pos + key.length - 1, vars[key]);
+        }
+    }
+    return new CachedSource(injector);
+}

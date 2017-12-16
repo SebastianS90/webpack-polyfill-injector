@@ -54,12 +54,12 @@ function loadFileAsString(file) {
     });
 }
 
-function loadFileAsSource(file) {
-    return loadFileAsString(file)
-        .then(data => new OriginalSource(
-            data.trimRight(),
-            file
-        ));
+async function loadFileAsSource(file) {
+    const data = await loadFileAsString(file);
+    return new OriginalSource(
+        data.trimRight(),
+        file
+    );
 }
 
 module.exports = {

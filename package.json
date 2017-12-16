@@ -18,6 +18,9 @@
     "test": "node node_modules/mocha/bin/mocha",
     "eslint": "node node_modules/eslint/bin/eslint.js --color --format codeframe ."
   },
+  "engines": {
+    "node": ">=7.6"
+  },
   "dependencies": {
     "loader-utils": "^1.0.2",
     "polyfill-service": "^3.24.0",
