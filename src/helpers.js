@@ -20,7 +20,7 @@ function getLoaderOptions(pluginState, loaderOptions) {
     }
 
     if (typeof options.polyfills === 'string') {
-        options.modules = [options.polyfills];
+        options.polyfills = [options.polyfills];
     } else if (!Array.isArray(options.polyfills) || options.polyfills.length === 0) {
         throw new Error('[webpack-polyfill-injector] You need to specify the `polyfills` option!');
     }
