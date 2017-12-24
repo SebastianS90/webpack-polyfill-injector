@@ -44,12 +44,27 @@ function compile(options) {
     });
 }
 
+function createDOM() {
+    return new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>', {
+        runScripts: 'outside-only',
+    });
+}
+
+function executeScript(dom, fs) {
+    const scripts = dom.window.document.head.getElementsByTagName('script');
+    if (scripts.length > 0) {
+        const polyfillsUrl = scripts[0].src;
+        const polyfillsFile = fs.readFileSync(polyfillsUrl, 'utf-8');
+        dom.window.eval(polyfillsFile);
+        dom.window.eval(`window.document.head.getElementsByTagName('script')[0].onload()`);
+        return {polyfillsUrl, polyfillsFile};
+    }
+    return {};
+}
+
 async function test(options) {
     const testHooks = Object.assign({
         executeBundle() {
-            return true;
-        },
-        executePolyfills() {
             return true;
         },
     }, options.testHooks);
@@ -57,9 +72,7 @@ async function test(options) {
 
     const {fs, stats} = await compile(options);
     const app = fs.readFileSync('/app.js', 'utf-8');
-    const dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>', {
-        runScripts: 'outside-only',
-    });
+    const dom = createDOM();
     const window = dom.window;
     const state = {fs, stats, dom, window, app};
 
@@ -68,21 +81,7 @@ async function test(options) {
     }
 
     window.eval(app);
-
-    const scripts = window.document.head.getElementsByTagName('script');
-    if (scripts.length > 0) {
-        state.polyfillsUrl = scripts[0].src;
-        state.polyfillsFile = fs.readFileSync(state.polyfillsUrl, 'utf-8');
-
-        if (testHooks.executePolyfills(state) === false) {
-            return state;
-        }
-
-        window.eval(state.polyfillsFile);
-        window.eval(`window.document.head.getElementsByTagName('script')[0].onload()`);
-    }
-
-    return state;
+    return Object.assign(state, executeScript(dom, fs));
 }
 
 describe('webpack-polyfill-injector', () => {
@@ -91,7 +90,7 @@ describe('webpack-polyfill-injector', () => {
             let state; // eslint-disable-line init-declarations
             before(async () => {
                 state = await test({
-                    entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/simple.js"]}!'},
+                    entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/entry.js"]}!'},
                     plugins: [new PolyfillInjectorPlugin({polyfills: ['Promise']})],
                     testHooks: {
                         executeBundle({window}) {
@@ -125,7 +124,7 @@ describe('webpack-polyfill-injector', () => {
             let state; // eslint-disable-line init-declarations
             before(async () => {
                 state = await test({
-                    entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/simple.js"]}!'},
+                    entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/entry.js"]}!'},
                     plugins: [new PolyfillInjectorPlugin({polyfills: ['Promise']})],
                 });
             });
@@ -146,7 +145,7 @@ describe('webpack-polyfill-injector', () => {
             let state; // eslint-disable-line init-declarations
             before(async () => {
                 state = await test({
-                    entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/simple.js"]}!'},
+                    entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/entry.js"]}!'},
                     plugins: [new PolyfillInjectorPlugin({polyfills: ['Promise', 'Array.prototype.find'], singleFile: true})],
                     testHooks: {
                         executeBundle({window}) {
@@ -186,7 +185,7 @@ describe('webpack-polyfill-injector', () => {
             let state; // eslint-disable-line init-declarations
             before(async () => {
                 state = await test({
-                    entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/simple.js"]}!'},
+                    entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/entry.js"]}!'},
                     plugins: [new PolyfillInjectorPlugin({polyfills: ['Promise']})],
                 });
             });
@@ -207,7 +206,7 @@ describe('webpack-polyfill-injector', () => {
             let state; // eslint-disable-line init-declarations
             before(async () => {
                 state = await test({
-                    entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/simple.js"]}!'},
+                    entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/entry.js"]}!'},
                     plugins: [new PolyfillInjectorPlugin({polyfills: ['Promise', 'Array.prototype.find']})],
                     testHooks: {
                         executeBundle({window}) {
@@ -260,7 +259,7 @@ describe('webpack-polyfill-injector', () => {
             let state; // eslint-disable-line init-declarations
             before(async () => {
                 state = await test({
-                    entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/simple.js"]}!'},
+                    entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/entry.js"]}!'},
                     plugins: [new PolyfillInjectorPlugin({polyfills: ['Promise']})],
                 });
             });
@@ -279,7 +278,7 @@ describe('webpack-polyfill-injector', () => {
     describe('When requesting ten polyfills (without singleFile option)', () => {
         it('creates 1024 assets: app.js and 1023 polyfill combinations', async () => {
             const state = await test({
-                entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/simple.js"]}!'},
+                entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/entry.js"]}!'},
                 plugins: [new PolyfillInjectorPlugin({polyfills: [
                     'Promise',
                     'Array.from',
@@ -302,17 +301,93 @@ describe('webpack-polyfill-injector', () => {
     });
 
 
+    describe('When configuring multiple entry modules', () => {
+        let state; // eslint-disable-line init-declarations
+        before(async () => {
+            state = await test({
+                entry: {
+                    app: `webpack-polyfill-injector?${JSON.stringify({
+                        modules: [
+                            './test/fixtures/entry.js',
+                            './test/fixtures/entry2.js',
+                        ],
+                        polyfills: ['Promise'],
+                    })}!`,
+                    other: `webpack-polyfill-injector?${JSON.stringify({
+                        modules: [
+                            './test/fixtures/entry3.js',
+                        ],
+                        polyfills: ['Array.prototype.find'],
+                    })}!`,
+                },
+                plugins: [new PolyfillInjectorPlugin({polyfills: ['Promise', 'Array.prototype.find']})],
+                testHooks: {
+                    executeBundle({window}) {
+                        window.eval('delete window.Promise');
+                        window.eval('delete window.Array.prototype.find');
+                    },
+                },
+            });
+        });
+
+        it('creates two assets: app.js, other.js, polyfills.js, polyfills-1.js', () => {
+            const assets = state.stats.compilation.assets;
+            expect(Object.keys(assets)).to.have.lengthOf(4);
+            expect(assets).to.have.property('app.js');
+            expect(assets).to.have.property('polyfills.js');
+            expect(assets).to.have.property('other.js');
+            expect(assets).to.have.property('polyfills-1.js');
+        });
+
+        it('does not mix the polyfill configurations', () => {
+            const polyfills2 = state.fs.readFileSync('/polyfills-1.js', 'utf-8');
+            expect(state.polyfillsFile).to.contain('Promise');
+            expect(state.polyfillsFile).to.not.contain('Array.prototype.find');
+            expect(polyfills2).to.not.contain('Promise');
+            expect(polyfills2).to.contain('Array.prototype.find');
+        });
+
+        it('does not guard the polyfills', () => {
+            const polyfills2 = state.fs.readFileSync('/polyfills-1.js', 'utf-8');
+            expect(state.polyfillsFile).to.not.contain(`'Promise' in this`);
+            expect(polyfills2).to.not.contain(`'find' in Array.prototype`);
+        });
+
+        it('executes the "app" entry module correctly', () => {
+            expect(state.window).to.have.property('Promise');
+            expect(state.window.Array.prototype).to.not.have.property('find');
+            expect(state.dom.serialize())
+                .to.contain('<p>---SUCCESS---</p><p>[entry2]function[/entry2]</p>')
+                .and.to.not.contain('entry3');
+        });
+
+        it('executes the "other" entry module correctly', () => {
+            const dom = createDOM();
+            dom.window.eval('delete window.Promise');
+            dom.window.eval('delete window.Array.prototype.find');
+            dom.window.eval(state.fs.readFileSync('/other.js', 'utf-8'));
+            executeScript(dom, state.fs);
+            expect(dom.window).to.not.have.property('Promise');
+            expect(dom.window.Array.prototype).to.have.property('find');
+            expect(dom.serialize())
+                .to.contain('<p>[entry3]function[/entry3]</p>')
+                .and.to.not.contain('---SUCCESS---')
+                .and.to.not.contain('entry2');
+        });
+    });
+
+
     describe('When using [hash] as part of the filename', () => {
         let state; // eslint-disable-line init-declarations
         before(async () => {
             state = await compile({
                 output: {filename: '[name].[hash].js'},
-                entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/simple.js"]}!'},
+                entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/entry.js"]}!'},
                 plugins: [new PolyfillInjectorPlugin({polyfills: ['Promise', 'Array.prototype.find']})],
             });
         });
 
-        it('ccreates hashed polyfills files', () => {
+        it('creates hashed polyfills files', () => {
             const polyfillFiles = state.fs.readdirSync('/').filter(name => name.startsWith('polyfills'));
             expect(polyfillFiles).to.have.lengthOf(3);
             const hash = polyfillFiles[0].replace(/^polyfills\.(.*)\.[01][01]\.js$/, '$1');
@@ -332,12 +407,12 @@ describe('webpack-polyfill-injector', () => {
         before(async () => {
             state = await compile({
                 output: {filename: '[name].[chunkhash:7].js'},
-                entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/simple.js"]}!'},
+                entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/entry.js"]}!'},
                 plugins: [new PolyfillInjectorPlugin({polyfills: ['Promise', 'Array.prototype.find']})],
             });
         });
 
-        it('ccreates hashed polyfills files', () => {
+        it('creates hashed polyfills files', () => {
             const polyfillFiles = state.fs.readdirSync('/').filter(name => name.startsWith('polyfills'));
             expect(polyfillFiles).to.have.lengthOf(3);
             const hash = polyfillFiles[0].replace(/^polyfills\.(.*)\.[01][01]\.js$/, '$1');
@@ -356,7 +431,7 @@ describe('webpack-polyfill-injector', () => {
         describe('Plugin without loader', () => {
             it('yields a useful error message', () =>
                 expect(compile({
-                    entry: './test/fixtures/simple.js',
+                    entry: './test/fixtures/entry.js',
                     plugins: [new PolyfillInjectorPlugin()],
                 })).to.be.rejectedWith('The plugin must be used together with the loader!')
             );
@@ -379,7 +454,7 @@ describe('webpack-polyfill-injector', () => {
         describe('No polyfills are specified', () => {
             it('yields a useful error message', () =>
                 expect(compile({
-                    entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/simple.js"]}!'},
+                    entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/entry.js"]}!'},
                     plugins: [new PolyfillInjectorPlugin()],
                 })).to.be.rejectedWith('You need to specify the `polyfills` option!')
             );
