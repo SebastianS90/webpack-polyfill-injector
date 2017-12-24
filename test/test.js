@@ -1,7 +1,7 @@
 /* global Promise */
 const
-    _ = require('lodash'),
     path = require('path'),
+    _ = require('lodash'),
     chai = require('chai'),
     MemoryFS = require('memory-fs'),
     {JSDOM} = require('jsdom'),
@@ -10,6 +10,7 @@ const
 
 chai.use(require('dirty-chai'));
 chai.use(require('chai-as-promised'));
+
 const expect = chai.expect;
 
 const webpackConfig = {

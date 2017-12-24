@@ -1,4 +1,3 @@
-/* global Promise */
 const
     loaderUtils = require('loader-utils'),
     {concatSources, loadFileAsString, loadFileAsSource} = require('./helpers.js');

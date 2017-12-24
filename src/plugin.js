@@ -1,4 +1,3 @@
-/* global Promise */
 const
     ConcatSource = require('webpack-sources').ConcatSource,
     PrefixSource = require('webpack-sources').PrefixSource,

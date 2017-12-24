@@ -1,4 +1,3 @@
-/* global Promise */
 const
     fs = require('fs'),
     ConcatSource = require('webpack-sources').ConcatSource,

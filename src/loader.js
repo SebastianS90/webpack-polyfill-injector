@@ -1,4 +1,3 @@
-/* global Promise */
 const
     loaderUtils = require('loader-utils'),
     CachedSource = require('webpack-sources').CachedSource,
