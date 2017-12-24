@@ -15,7 +15,7 @@
   "author": "Sebastian Schweizer",
   "license": "MIT",
   "scripts": {
-    "test": "mocha",
+    "test": "nyc mocha",
     "eslint": "eslint --color --format codeframe ."
   },
   "engines": {
@@ -36,6 +36,7 @@
     "lodash": "^4.17.4",
     "memory-fs": "^0.4.1",
     "mocha": "^4.0.1",
+    "nyc": "^11.4.1",
     "webpack": "^3.10.0"
   }
 }
