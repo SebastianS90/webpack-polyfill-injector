@@ -1,6 +1,7 @@
 [![npm][npm]][npm-url]
 [![deps][deps]][deps-url]
 [![test][test]][test-url]
+[![coverage][coverage]][coverage-url]
 
 # Webpack Polyfill Injector Plugin
 This plugin uses polyfills from [polyfill-service](https://github.com/Financial-Times/polyfill-service) and inserts them into your bundle.
@@ -168,3 +169,6 @@ This is due to some detectors using `this` instead of `window`, e.g. `Promise` t
 
 [test]: https://secure.travis-ci.org/SebastianS90/webpack-polyfill-injector.svg
 [test-url]: http://travis-ci.org/SebastianS90/webpack-polyfill-injector
+
+[coverage]: https://coveralls.io/repos/github/SebastianS90/webpack-polyfill-injector/badge.svg
+[coverage-url]: https://coveralls.io/github/SebastianS90/webpack-polyfill-injector
