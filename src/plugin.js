@@ -2,9 +2,7 @@ const
     ConcatSource = require('webpack-sources').ConcatSource,
     PrefixSource = require('webpack-sources').PrefixSource,
     CachedSource = require('webpack-sources').CachedSource,
-    loaderUtils = require('loader-utils'),
-    PluginState = require('./PluginState.js'),
-    {getLoaderOptions} = require('./helpers.js');
+    PluginState = require('./PluginState.js');
 
 class PolyfillInjectorPlugin {
     constructor(options) {
@@ -32,36 +30,6 @@ class PolyfillInjectorPlugin {
                         throw new Error('[webpack-polyfill-injector] The plugin must be used together with the loader!');
                     }
 
-                    // Get all chunks that contain modules from our loader
-                    const chunksWithSingleInjector = {};
-                    const chunksWithMultiInjector = {};
-                    const loaderPrefix = require.resolve('./loader.js') + '?';
-                    compilation.chunks.forEach((chunk) => {
-                        chunk.forEachModule((module) => {
-                            if (module.request) {
-                                module.request.split('!').forEach((request) => {
-                                    if (request.startsWith(loaderPrefix)) {
-                                        const options = getLoaderOptions(
-                                            pluginState,
-                                            loaderUtils.parseQuery(request.substr(loaderPrefix.length - 1))
-                                        );
-                                        const encoded = JSON.stringify(options.polyfills);
-                                        const store = options.singleFile
-                                            ? chunksWithSingleInjector
-                                            : chunksWithMultiInjector;
-                                        if (Object.prototype.hasOwnProperty.call(store, encoded)) {
-                                            if (!store[encoded].includes(chunk)) {
-                                                store[encoded].push(chunk);
-                                            }
-                                        } else {
-                                            store[encoded] = [chunk];
-                                        }
-                                    }
-                                });
-                            }
-                        });
-                    });
-
                     // Create the additional assets
                     await pluginState.iteratePolyfillSets(
                         async ({polyfills, singleFile, banner}, filename) => {
@@ -71,7 +39,6 @@ class PolyfillInjectorPlugin {
                                 // and the detectors if we are creating a single file that contains multiple polyfills
                                 tasks.push(...polyfills.map(polyfill => pluginState.getPolyfillDetector(polyfill)));
                             }
-                            const polyfillsString = JSON.stringify(polyfills);
 
                             // Run all tasks and split the results into their appropriate arrays
                             const polyfillSources = await Promise.all(tasks);
@@ -86,9 +53,7 @@ class PolyfillInjectorPlugin {
                                     polyfillSources,
                                     polyfillDetectors
                                 );
-                                chunksWithSingleInjector[polyfillsString].forEach((chunk) => {
-                                    chunk.files.push(filename);
-                                });
+                                addAsChunk(filename, compilation);
                             } else {
                                 // Create one file for each possible subset of polyfills
                                 const choices = Math.pow(2, polyfills.length);
@@ -101,9 +66,7 @@ class PolyfillInjectorPlugin {
                                         polyfillSources,
                                         choice
                                     );
-                                    chunksWithMultiInjector[polyfillsString].forEach((chunk) => {
-                                        chunk.files.push(outputFile);
-                                    });
+                                    addAsChunk(outputFile, compilation);
                                 }
                             }
                         }
@@ -147,6 +110,12 @@ function constructFileWithTests(banner, polyfills, polyfillSources, polyfillDete
         }
     });
     return new CachedSource(source);
+}
+
+function addAsChunk(filename, compilation) {
+    const chunk = compilation.addChunk(null, null, null);
+    chunk.ids = [];
+    chunk.files.push(filename);
 }
 
 module.exports = PolyfillInjectorPlugin;
