@@ -70,12 +70,12 @@ function loadCache(key, cache, loader) {
 }
 
 async function loadPolyfillSource(polyfill) { // eslint-disable-line require-await
-    const file = require.resolve(`polyfill-service/polyfills/__dist/${polyfill}/raw.js`);
+    const file = require.resolve(`polyfill-library/polyfills/__dist/${polyfill}/raw.js`);
     return loadFileAsSource(file);
 }
 
 async function loadPolyfillMeta(polyfill) {
-    const file = require.resolve(`polyfill-service/polyfills/__dist/${polyfill}/meta.json`);
+    const file = require.resolve(`polyfill-library/polyfills/__dist/${polyfill}/meta.json`);
     const content = await loadFileAsString(file);
     return JSON.parse(content);
 }

@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "loader-utils": "^1.0.2",
-    "polyfill-service": "^3.24.0",
+    "polyfill-library": "^3.26.0-0",
     "webpack-sources": "^1.0.0"
   },
   "devDependencies": {
