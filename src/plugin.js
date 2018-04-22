@@ -33,16 +33,34 @@ class PolyfillInjectorPlugin {
                     // Create the additional assets
                     await pluginState.iteratePolyfillSets(
                         async ({polyfills, singleFile, banner}, filename) => {
-                            // Load all polyfill sources
+                            // Load all polyfill sources and meta data
                             const tasks = polyfills.map(polyfill => pluginState.getPolyfillSource(polyfill));
-                            if (singleFile && polyfills.length > 1) {
-                                // and the detectors if we are creating a single file that contains multiple polyfills
-                                tasks.push(...polyfills.map(polyfill => pluginState.getPolyfillDetector(polyfill)));
-                            }
+                            tasks.push(...polyfills.map(polyfill => pluginState.getPolyfillMeta(polyfill)));
 
                             // Run all tasks and split the results into their appropriate arrays
                             const polyfillSources = await Promise.all(tasks);
-                            const polyfillDetectors = polyfillSources.splice(polyfills.length);
+                            const polyfillMetas = polyfillSources.splice(polyfills.length);
+
+                            // Collect internal dependencies (i.e. polyfills whose names start with underscore)
+                            const dependencySources = {};
+                            async function resolveDependencies(dependencies, fetched) {
+                                const deps = dependencies.filter(d => d.startsWith('_') && !fetched.includes(d));
+                                const tasks = deps.map(dep => pluginState.getPolyfillSource(dep));
+                                tasks.push(...deps.map(dep => pluginState.getPolyfillMeta(dep)));
+                                const depsSources = await Promise.all(tasks);
+                                const depsMetas = depsSources.splice(deps.length);
+                                deps.forEach((dep, i) => {
+                                    dependencySources[dep] = depsSources[i];
+                                });
+                                fetched.push(...deps);
+                                const recursiveDeps = await Promise.all(
+                                    depsMetas.map(meta => resolveDependencies(meta.dependencies || [], fetched))
+                                );
+                                return [].concat(deps, ...recursiveDeps);
+                            }
+                            const polyfillDependencies = await Promise.all(
+                                polyfillMetas.map(meta => resolveDependencies(meta.dependencies || [], []))
+                            );
 
                             if (singleFile) {
                                 // Create one file containing all requested polyfills
@@ -51,7 +69,9 @@ class PolyfillInjectorPlugin {
                                     banner,
                                     polyfills,
                                     polyfillSources,
-                                    polyfillDetectors
+                                    polyfillMetas.map(meta => meta.detectSource),
+                                    polyfillDependencies,
+                                    dependencySources
                                 );
                                 addAsChunk(filename, compilation);
                             } else {
@@ -64,6 +84,8 @@ class PolyfillInjectorPlugin {
                                         banner,
                                         polyfills,
                                         polyfillSources,
+                                        polyfillDependencies,
+                                        dependencySources,
                                         choice
                                     );
                                     addAsChunk(outputFile, compilation);
@@ -80,17 +102,17 @@ class PolyfillInjectorPlugin {
     }
 }
 
-function constructFile(withTests, banner, polyfills, polyfillSources, polyfillDetectors, choice) {
+function constructFile(withTests, banner, polyfills, polyfillSources, polyfillDetectors, polyfillDependencies, dependencySources, choice) {
     return withTests
-        ? constructFileWithTests(banner, polyfills, polyfillSources, polyfillDetectors, choice)
-        : constructFileWithoutTests(banner, polyfills, polyfillSources, choice);
+        ? constructFileWithTests(banner, polyfills, polyfillSources, polyfillDetectors, polyfillDependencies, dependencySources, choice)
+        : constructFileWithoutTests(banner, polyfills, polyfillSources, polyfillDependencies, dependencySources, choice);
 }
 
-function constructFileWithoutTests(banner, polyfills, polyfillSources, choice) {
+function constructFileWithoutTests(banner, polyfills, polyfillSources, polyfillDependencies, dependencySources, choice) {
     const source = new ConcatSource(banner || '');
+    source.add(constructDependencies(polyfills, polyfillDependencies, dependencySources, choice));
     polyfills.forEach((polyfill, i) => {
         if (!choice || choice.charAt(i) === '1') {
-            // source.add(`\n// ${polyfill}\n`);
             source.add('\n');
             source.add(polyfillSources[i]);
             source.add('\n');
@@ -99,17 +121,36 @@ function constructFileWithoutTests(banner, polyfills, polyfillSources, choice) {
     return new CachedSource(source);
 }
 
-function constructFileWithTests(banner, polyfills, polyfillSources, polyfillDetectors, choice) {
+function constructFileWithTests(banner, polyfills, polyfillSources, polyfillDetectors, polyfillDependencies, dependencySources, choice) {
     const source = new ConcatSource(banner || '');
+    source.add(constructDependencies(polyfills, polyfillDependencies, dependencySources, choice));
     polyfills.forEach((polyfill, i) => {
         if (!choice || choice.charAt(i) === '1') {
-            // source.add(`\n// ${polyfill}\nif(!(${polyfillDetectors[i]})) {\n`);
             source.add(`\nif(!(${polyfillDetectors[i]})) {\n`);
             source.add(new PrefixSource('    ', polyfillSources[i]));
             source.add('\n}\n');
         }
     });
     return new CachedSource(source);
+}
+
+function constructDependencies(polyfills, polyfillDependencies, dependencySources, choice) {
+    const dependencies = [];
+    polyfills.forEach((polyfill, i) => {
+        if (!choice || choice.charAt(i) === '1') {
+            polyfillDependencies[i].forEach((dep) => {
+                if (!dependencies.includes(dep)) {
+                    dependencies.push(dep);
+                }
+            });
+        }
+    });
+    const source = new ConcatSource();
+    dependencies.forEach((dep) => {
+        source.add(dependencySources[dep]);
+        source.add('\n');
+    });
+    return source;
 }
 
 function addAsChunk(filename, compilation) {

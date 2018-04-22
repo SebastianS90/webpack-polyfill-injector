@@ -7,7 +7,7 @@ class PluginState {
         this._requestedPolyfillSets = [];
         this._filenames = {};
         this._polyfillCache = {};
-        this._detectorCache = {};
+        this._metaCache = {};
         this.defaultFilename = compilation.options.output.filename.replace(/([[:])chunkhash([\]:])/, '$1hash$2');
         this.publicPath = compilation.options.output.publicPath || '';
         this.options = options;
@@ -57,8 +57,8 @@ class PluginState {
         return loadCache(polyfill, this._polyfillCache, loadPolyfillSource);
     }
 
-    getPolyfillDetector(polyfill) {
-        return loadCache(polyfill, this._detectorCache, loadPolyfillDetector);
+    getPolyfillMeta(polyfill) {
+        return loadCache(polyfill, this._metaCache, loadPolyfillMeta);
     }
 }
 
@@ -69,19 +69,15 @@ function loadCache(key, cache, loader) {
     return cache[key] = loader(key);
 }
 
-async function loadPolyfillSource(polyfill) { // eslint-disable-line require-await
-    const file = require.resolve(`polyfill-service/polyfills/__dist/${polyfill}/raw.js`);
+function loadPolyfillSource(polyfill) {
+    const file = require.resolve(`polyfill-library/polyfills/__dist/${polyfill}/raw.js`);
     return loadFileAsSource(file);
 }
 
 async function loadPolyfillMeta(polyfill) {
-    const file = require.resolve(`polyfill-service/polyfills/__dist/${polyfill}/meta.json`);
+    const file = require.resolve(`polyfill-library/polyfills/__dist/${polyfill}/meta.json`);
     const content = await loadFileAsString(file);
     return JSON.parse(content);
-}
-
-async function loadPolyfillDetector(polyfill) {
-    return (await loadPolyfillMeta(polyfill)).detectSource;
 }
 
 module.exports = PluginState;

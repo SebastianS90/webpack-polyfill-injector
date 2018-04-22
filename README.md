@@ -30,8 +30,6 @@ or
 npm install webpack-polyfill-injector --save-dev
 ```
 
-**Please note:** Due to its dependency on `polyfill-service`, this package pulls in a lot of additional packages on installation. Furthermore, there is a heavy `postinstall` script in `polyfill-service`. The situation will improve a lot once [`polyfill-service#1267`](https://github.com/Financial-Times/polyfill-service/pull/1267) is merged and we can switch over to depend on the separate new `polyfill-library` package.
-
 
 ## Usage
 ```javascript
