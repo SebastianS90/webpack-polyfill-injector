@@ -19,6 +19,9 @@ const webpackConfig = {
         publicPath: '/',
         filename: '[name].js',
     },
+    optimization: {
+        minimize: false,
+    },
     resolveLoader: {
         alias: {
             'webpack-polyfill-injector': path.resolve(__dirname, '..'),
