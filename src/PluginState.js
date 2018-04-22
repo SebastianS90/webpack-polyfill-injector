@@ -9,7 +9,7 @@ class PluginState {
         this._polyfillCache = {};
         this._detectorCache = {};
         this.defaultFilename = compilation.options.output.filename.replace(/([[:])chunkhash([\]:])/, '$1hash$2');
-        this.publicPath = compilation.options.output.publicPath;
+        this.publicPath = compilation.options.output.publicPath || '';
         this.options = options;
     }
 

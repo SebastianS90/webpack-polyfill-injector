@@ -1,4 +1,4 @@
-/* global Promise */
+/* eslint-disable max-lines */
 const
     path = require('path'),
     _ = require('lodash'),
@@ -494,6 +494,32 @@ describe('webpack-polyfill-injector', () => {
                     plugins: [new PolyfillInjectorPlugin()],
                 })).to.be.rejectedWith('You need to specify the `polyfills` option!')
             );
+        });
+    });
+
+    describe('When using without publicPath', () => {
+        it('defaults to empty string', (done) => {
+            const config = _.merge({}, webpackConfig, {
+                output: {filename: '[name].js'},
+                entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/entry.js"]}!'},
+                plugins: [new PolyfillInjectorPlugin({polyfills: ['Promise', 'Array.prototype.find']})],
+            });
+            delete config.output.publicPath;
+            const compiler = webpack(config);
+            const fs = new MemoryFS();
+            compiler.outputFileSystem = fs;
+            compiler.run((err, stats) => {
+                if (err) {
+                    done(err);
+                } else if (stats.compilation.errors.length > 0) {
+                    done(stats.compilation.errors[0]);
+                } else {
+                    expect(fs.readFileSync('/app.js', 'utf-8')).to.be.a('string')
+                        .and.not.include('undefined')
+                        .and.include(`js.src = "polyfills." + polyfills.join('') + '.js';`);
+                    done();
+                }
+            });
         });
     });
 });
