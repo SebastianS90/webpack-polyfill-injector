@@ -21,7 +21,7 @@ module.exports = async function loader(content, map, meta) {
 
         // Collect all tasks that will be run concurrently.
         const tasks = polyfills.map(
-            polyfill => pluginState.getPolyfillDetector(polyfill)
+            polyfill => pluginState.getPolyfillMeta(polyfill)
         ); // -> detectors
         tasks.push(pluginState.addPolyfills(options)); // -> outputFilename
         tasks.push(loadFileAsSource(
@@ -29,8 +29,9 @@ module.exports = async function loader(content, map, meta) {
         )); // -> template
 
         // Run all tasks and save the results
-        const detectors = await Promise.all(tasks);
-        const [outputFilename, template] = detectors.splice(polyfills.length, 2);
+        const results = await Promise.all(tasks);
+        const [outputFilename, template] = results.splice(polyfills.length, 2);
+        const detectors = results.map(meta => meta.detectSource);
 
         // Construct the main module
         const source = constructMainModule(
