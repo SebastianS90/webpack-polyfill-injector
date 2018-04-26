@@ -10,93 +10,87 @@ class PolyfillInjectorPlugin {
     }
 
     apply(compiler) {
-        compiler.plugin('invalid', () => {
+        compiler.hooks.invalid.tap('webpack-polyfill-injector', () => {
             compiler.__WebpackPolyfillInjectorInWatchRun = true;
         });
 
-        compiler.plugin('this-compilation', (compilation) => {
+        compiler.hooks.thisCompilation.tap('webpack-polyfill-injector', (compilation) => {
             const pluginState = new PluginState(compilation, this.options);
             compilation.__WebpackPolyfillInjector = pluginState;
 
-            compilation.plugin('additional-assets', async (callback) => {
-                try {
-                    if (compiler.__WebpackPolyfillInjectorInWatchRun) {
-                        // Nothing to do for successive compilations
-                        callback();
-                        return;
-                    }
+            compilation.hooks.additionalAssets.tapPromise('webpack-polyfill-injector', async () => {
+                if (compiler.__WebpackPolyfillInjectorInWatchRun) {
+                    // Nothing to do for successive compilations
+                    return;
+                }
 
-                    if (!pluginState.hasLoader) {
-                        throw new Error('[webpack-polyfill-injector] The plugin must be used together with the loader!');
-                    }
+                if (!pluginState.hasLoader) {
+                    throw new Error('[webpack-polyfill-injector] The plugin must be used together with the loader!');
+                }
 
-                    // Create the additional assets
-                    await pluginState.iteratePolyfillSets(
-                        async ({polyfills, singleFile, banner}, filename) => {
-                            // Load all polyfill sources and meta data
-                            const tasks = polyfills.map(polyfill => pluginState.getPolyfillSource(polyfill));
-                            tasks.push(...polyfills.map(polyfill => pluginState.getPolyfillMeta(polyfill)));
+                // Create the additional assets
+                await pluginState.iteratePolyfillSets(
+                    async ({polyfills, singleFile, banner}, filename) => {
+                        // Load all polyfill sources and meta data
+                        const tasks = polyfills.map(polyfill => pluginState.getPolyfillSource(polyfill));
+                        tasks.push(...polyfills.map(polyfill => pluginState.getPolyfillMeta(polyfill)));
 
-                            // Run all tasks and split the results into their appropriate arrays
-                            const polyfillSources = await Promise.all(tasks);
-                            const polyfillMetas = polyfillSources.splice(polyfills.length);
+                        // Run all tasks and split the results into their appropriate arrays
+                        const polyfillSources = await Promise.all(tasks);
+                        const polyfillMetas = polyfillSources.splice(polyfills.length);
 
-                            // Collect internal dependencies (i.e. polyfills whose names start with underscore)
-                            const dependencySources = {};
-                            async function resolveDependencies(dependencies, fetched) {
-                                const deps = dependencies.filter(d => d.startsWith('_') && !fetched.includes(d));
-                                const tasks = deps.map(dep => pluginState.getPolyfillSource(dep));
-                                tasks.push(...deps.map(dep => pluginState.getPolyfillMeta(dep)));
-                                const depsSources = await Promise.all(tasks);
-                                const depsMetas = depsSources.splice(deps.length);
-                                deps.forEach((dep, i) => {
-                                    dependencySources[dep] = depsSources[i];
-                                });
-                                fetched.push(...deps);
-                                const recursiveDeps = await Promise.all(
-                                    depsMetas.map(meta => resolveDependencies(meta.dependencies || [], fetched))
-                                );
-                                return [].concat(deps, ...recursiveDeps);
-                            }
-                            const polyfillDependencies = await Promise.all(
-                                polyfillMetas.map(meta => resolveDependencies(meta.dependencies || [], []))
+                        // Collect internal dependencies (i.e. polyfills whose names start with underscore)
+                        const dependencySources = {};
+                        async function resolveDependencies(dependencies, fetched) {
+                            const deps = dependencies.filter(d => d.startsWith('_') && !fetched.includes(d));
+                            const tasks = deps.map(dep => pluginState.getPolyfillSource(dep));
+                            tasks.push(...deps.map(dep => pluginState.getPolyfillMeta(dep)));
+                            const depsSources = await Promise.all(tasks);
+                            const depsMetas = depsSources.splice(deps.length);
+                            deps.forEach((dep, i) => {
+                                dependencySources[dep] = depsSources[i];
+                            });
+                            fetched.push(...deps);
+                            const recursiveDeps = await Promise.all(
+                                depsMetas.map(meta => resolveDependencies(meta.dependencies || [], fetched))
                             );
+                            return [].concat(deps, ...recursiveDeps);
+                        }
+                        const polyfillDependencies = await Promise.all(
+                            polyfillMetas.map(meta => resolveDependencies(meta.dependencies || [], []))
+                        );
 
-                            if (singleFile) {
-                                // Create one file containing all requested polyfills
-                                compilation.assets[filename] = constructFile(
-                                    polyfills.length > 1,
+                        if (singleFile) {
+                            // Create one file containing all requested polyfills
+                            compilation.assets[filename] = constructFile(
+                                polyfills.length > 1,
+                                banner,
+                                polyfills,
+                                polyfillSources,
+                                polyfillMetas.map(meta => meta.detectSource),
+                                polyfillDependencies,
+                                dependencySources
+                            );
+                            addAsChunk(filename, compilation);
+                        } else {
+                            // Create one file for each possible subset of polyfills
+                            const choices = Math.pow(2, polyfills.length);
+                            for (let choiceId = 1; choiceId < choices; choiceId++) {
+                                const choice = choiceId.toString(2).padStart(polyfills.length, '0');
+                                const outputFile = filename.replace(/\.js$/, '.') + choice + '.js';
+                                compilation.assets[outputFile] = constructFileWithoutTests(
                                     banner,
                                     polyfills,
                                     polyfillSources,
-                                    polyfillMetas.map(meta => meta.detectSource),
                                     polyfillDependencies,
-                                    dependencySources
+                                    dependencySources,
+                                    choice
                                 );
-                                addAsChunk(filename, compilation);
-                            } else {
-                                // Create one file for each possible subset of polyfills
-                                const choices = Math.pow(2, polyfills.length);
-                                for (let choiceId = 1; choiceId < choices; choiceId++) {
-                                    const choice = choiceId.toString(2).padStart(polyfills.length, '0');
-                                    const outputFile = filename.replace(/\.js$/, '.') + choice + '.js';
-                                    compilation.assets[outputFile] = constructFileWithoutTests(
-                                        banner,
-                                        polyfills,
-                                        polyfillSources,
-                                        polyfillDependencies,
-                                        dependencySources,
-                                        choice
-                                    );
-                                    addAsChunk(outputFile, compilation);
-                                }
+                                addAsChunk(outputFile, compilation);
                             }
                         }
-                    );
-                    callback(); // eslint-disable-line callback-return
-                } catch (error) {
-                    callback(error); // eslint-disable-line callback-return
-                }
+                    }
+                );
             });
         });
     }
