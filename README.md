@@ -20,6 +20,9 @@ The benefits of this plugin are:
 
 
 ## Install
+
+**Note:** The current version of this plugin requires webpack 4, for older webpack please use `^1.0.2`.
+
 ```bash
 yarn add webpack-polyfill-injector --dev
 ```
