@@ -8,7 +8,8 @@ class PluginState {
         this._filenames = {};
         this._polyfillCache = {};
         this._metaCache = {};
-        this.defaultFilename = compilation.options.output.filename.replace(/([[:])chunkhash([\]:])/, '$1hash$2');
+        this.defaultFilename = compilation.options.output.filename;
+        this.defaultHashLength = compilation.options.output.hashDigestLength;
         this.publicPath = compilation.options.output.publicPath || '';
         this.options = options;
     }
@@ -37,7 +38,7 @@ class PluginState {
         const content = concatSources(sources);
         return loaderUtils.interpolateName(
             {resourcePath: `./polyfills${index === 0 ? '' : '-' + index}.js`},
-            options.filename,
+            formatFilename(options.filename, this.defaultHashLength),
             {content: content.source()}
         );
     }
@@ -60,6 +61,13 @@ class PluginState {
     getPolyfillMeta(polyfill) {
         return loadCache(polyfill, this._metaCache, loadPolyfillMeta);
     }
+}
+
+function formatFilename(filename, defaultHashLength) {
+    return defaultHashLength
+        ? filename.replace(/\[([^:]+:)?(?:chunk|content)hash(:[a-z]+\d*)?(:\d+)?\]/ig,
+            (match, p1, p2, p3) => `[${p1 || ''}hash${p2 || ''}${p3 || ':' + defaultHashLength}]`)
+        : filename.replace(/\[([^:]+:)?(?:chunk|content)hash(:[a-z]+\d*)?(:\d+)?\]/ig, '[$1hash$2$3]');
 }
 
 function loadCache(key, cache, loader) {
