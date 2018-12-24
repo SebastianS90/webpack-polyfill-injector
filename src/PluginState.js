@@ -1,17 +1,16 @@
 const
     loaderUtils = require('loader-utils'),
-    {concatSources, loadFileAsString, loadFileAsSource} = require('./helpers.js');
+    PolyfillLibrary = require('polyfill-library');
 
 class PluginState {
     constructor(compilation, options) {
         this._requestedPolyfillSets = [];
         this._filenames = {};
-        this._polyfillCache = {};
-        this._metaCache = {};
         this.defaultFilename = compilation.options.output.filename;
         this.defaultHashLength = compilation.options.output.hashDigestLength;
         this.publicPath = compilation.options.output.publicPath || '';
         this.options = options;
+        this._polyfillLibrary = new PolyfillLibrary();
     }
 
     addPolyfills(options) {
@@ -19,6 +18,7 @@ class PluginState {
         const encoded = JSON.stringify({
             banner: options.banner,
             polyfills: options.polyfills,
+            excludes: options.excludes,
             singleFile: Boolean(options.singleFile),
             filename: options.filename,
         });
@@ -27,20 +27,12 @@ class PluginState {
             return this._filenames[index];
         }
         const newIndex = this._requestedPolyfillSets.push(encoded) - 1;
-        return this._filenames[newIndex] = this._calculateFilename(options, newIndex);
-    }
-
-    async _calculateFilename(options, index) {
-        // The filename might include a hash, so we need the contents of all requested polyfills
-        const sources = await Promise.all(
-            options.polyfills.map(polyfill => this.getPolyfillSource(polyfill))
-        );
-        const content = concatSources(sources);
-        return loaderUtils.interpolateName(
-            {resourcePath: `./polyfills${index === 0 ? '' : '-' + index}.js`},
-            formatFilename(options.filename, this.defaultHashLength),
-            {content: content.source()}
-        );
+        return this._filenames[newIndex] = this.getPolyfillsSource(options.polyfills, options.excludes, false).then(
+            content => loaderUtils.interpolateName(
+                {resourcePath: `./polyfills${newIndex === 0 ? '' : '-' + newIndex}.js`},
+                formatFilename(options.filename, this.defaultHashLength),
+                {content}
+            ));
     }
 
     iteratePolyfillSets(iterator) {
@@ -54,12 +46,29 @@ class PluginState {
         );
     }
 
-    getPolyfillSource(polyfill) {
-        return loadCache(polyfill, this._polyfillCache, loadPolyfillSource);
+    getPolyfillsSource(polyfills, excludes, requiresAll) {
+        const flags = new Set(['always', 'gated']);
+        const features = {};
+        polyfills.forEach((polyfill) => {
+            features[polyfill] = {flags};
+        });
+        if ('Promise.prototype.finally' in features && 'Promise' in features && requiresAll) {
+            delete features['Promise.prototype.finally'];
+        }
+        return this._polyfillLibrary.getPolyfillString({
+            minify: false,
+            unknown: 'polyfill',
+            features,
+            excludes,
+        });
     }
 
-    getPolyfillMeta(polyfill) {
-        return loadCache(polyfill, this._metaCache, loadPolyfillMeta);
+    async getPolyfillDetector(polyfill) {
+        const meta = await this._polyfillLibrary.describePolyfill(polyfill);
+        if (meta) {
+            return meta.detectSource;
+        }
+        throw new Error(`The polyfill ${polyfill} does not exist!`);
     }
 }
 
@@ -68,24 +77,6 @@ function formatFilename(filename, defaultHashLength) {
         ? filename.replace(/\[([^:]+:)?(?:chunk|content)hash(:[a-z]+\d*)?(:\d+)?\]/ig,
             (match, p1, p2, p3) => `[${p1 || ''}hash${p2 || ''}${p3 || ':' + defaultHashLength}]`)
         : filename.replace(/\[([^:]+:)?(?:chunk|content)hash(:[a-z]+\d*)?(:\d+)?\]/ig, '[$1hash$2$3]');
-}
-
-function loadCache(key, cache, loader) {
-    if (Object.prototype.hasOwnProperty.call(cache, key)) {
-        return cache[key];
-    }
-    return cache[key] = loader(key);
-}
-
-function loadPolyfillSource(polyfill) {
-    const file = require.resolve(`polyfill-library/polyfills/__dist/${polyfill}/raw.js`);
-    return loadFileAsSource(file);
-}
-
-async function loadPolyfillMeta(polyfill) {
-    const file = require.resolve(`polyfill-library/polyfills/__dist/${polyfill}/meta.json`);
-    const content = await loadFileAsString(file);
-    return JSON.parse(content);
 }
 
 module.exports = PluginState;

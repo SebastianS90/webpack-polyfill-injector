@@ -1,12 +1,12 @@
 language: node_js
 
 node_js:
-  - "9"
-  - "8"
+  - "11"
+  - "10"
 
 cache:
-  - yarn: true
+  - npm: true
 
 script:
-  - yarn run eslint
-  - yarn run coveralls
+  - npm run eslint
+  - npm run coveralls

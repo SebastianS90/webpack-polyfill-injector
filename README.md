@@ -4,7 +4,7 @@
 [![coverage][coverage]][coverage-url]
 
 # Webpack Polyfill Injector Plugin
-This plugin uses polyfills from [polyfill-service](https://github.com/Financial-Times/polyfill-service) and inserts them into your bundle.
+This plugin uses polyfills from [polyfill-library](https://github.com/Financial-Times/polyfill-library) and inserts them into your bundle.
 
 The benefits of this plugin are:
 - Users with modern browsers will not be punished:
@@ -73,11 +73,12 @@ The following options can be specified (for both loader and plugin, where loader
 
 | Option       | Type                 | Default | Description |
 |--------------|----------------------|---------|-------------|
-| `polyfills`  | `Array` of `String`s | *none*  | List of features that are required. Browsers will load polyfills for all features that are not supported natively.<br/>You can use any [polyfill from `polyfill-service`](https://github.com/Financial-Times/polyfill-service/tree/master/polyfills). See also [this list](https://polyfill.io/v2/docs/features/), but keep in mind that `webpack-polyfill-injector` creates staticly bundled files and therefore does not use the User-Agent string to determine which polyfills will be required, neither is there a default set. You need to explicitly list everything that is required by your application code. |
+| `polyfills`  | `Array` of `String`s | *none*  | List of features that are required. Browsers will load polyfills for all features that are not supported natively.<br/>You can use any [polyfill from `polyfill-library`](https://github.com/Financial-Times/polyfill-library/tree/master/polyfills). See also [this list](https://polyfill.io/v2/docs/features/), but keep in mind that `webpack-polyfill-injector` creates staticly bundled files and therefore does not use the User-Agent string to determine which polyfills will be required, neither is there a default set. You need to explicitly list everything that is required by your application code. |
 | `modules`    | `Array` of `String`s | *none*  | List of modules that are part of the current entry chunk. If you used to have `{name: ["./file1.js", "./file2.js"]}` as entry point then you will configure `{name: 'webpack-polyfill-injector?{modules:["./file1.js","./file2.js"]}!'}`.<br/>You can specify anything that can also be written inside a `require()` call, e.g. `'my-awesome-loader!./some-file.js'`. |
+| `excludes`  | `Array` of `String`s | `[]`  | List of polyfills that should not be added even though another polyfill depends on it. |
 | `singleFile` | `Boolean`            | `false` | Whether to create only a single file for all polyfills instead of `2^n - 1` files (one per subset). This will decrease your bundle size, but increase the bandwidth usage for browsers that support some (but not all) features natively. |
 | `filename`   | `String`             | `output.filename` | The path and filename for generated polyfill files. The default is to use whatever is specified in `output.filename`. Make sure to include the `[name]` placeholder or use different `filename` settings if the list of polyfills differs between some entry chunks.
-| `banner`     | `String`             | `'/*! For detailed credits and licence information see https://github.com/financial-times/polyfill-service */\n'` | The banner that is inserted on the top of all generated polyfill files. |
+| `banner`     | `String`             | `'/*! For detailed credits and licence information see https://github.com/financial-times/polyfill-library */\n'` | The banner that is inserted on the top of all generated polyfill files. |
 
 
 ## Technical Details

@@ -110,10 +110,6 @@ describe('webpack-polyfill-injector', () => {
                 expect(assets).to.have.property('polyfills.js');
             });
 
-            it('does not guard the polyfill', () => {
-                expect(state.polyfillsFile).to.not.contain(`'Promise' in this`);
-            });
-
             it('loads the polyfill', () => {
                 expect(state.window).to.have.property('Promise');
             });
@@ -170,11 +166,6 @@ describe('webpack-polyfill-injector', () => {
                 expect(state.polyfillsFile).to.contain('Array.prototype.find');
             });
 
-            it('guards the polyfills', () => {
-                expect(state.polyfillsFile).to.contain(`if(!('Promise' in this))`);
-                expect(state.polyfillsFile).to.contain(`if(!('find' in Array.prototype))`);
-            });
-
             it('loads the polyfill', () => {
                 expect(state.window).to.have.property('Promise');
             });
@@ -210,7 +201,7 @@ describe('webpack-polyfill-injector', () => {
             before(async () => {
                 state = await test({
                     entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/entry.js"]}!'},
-                    plugins: [new PolyfillInjectorPlugin({polyfills: ['Promise', 'Array.prototype.find']})],
+                    plugins: [new PolyfillInjectorPlugin({polyfills: ['Array.prototype.find', 'Promise']})],
                     testHooks: {
                         executeBundle({window}) {
                             window.eval('delete window.Promise');
@@ -232,21 +223,16 @@ describe('webpack-polyfill-injector', () => {
                 const p01 = state.fs.readFileSync('/polyfills.01.js', 'utf-8');
                 const p10 = state.fs.readFileSync('/polyfills.10.js', 'utf-8');
                 const p11 = state.fs.readFileSync('/polyfills.11.js', 'utf-8');
-                expect(p01).to.not.contain('Promise');
-                expect(p01).to.contain('Array.prototype.find');
-                expect(p10).to.contain('Promise');
-                expect(p10).to.not.contain('Array.prototype.find');
-                expect(p11).to.contain('Promise');
+                expect(p01).to.not.contain('Array.prototype.find');
+                expect(p01).to.contain('Promise');
+                expect(p10).to.contain('Array.prototype.find');
+                expect(p10).to.not.contain('Promise');
                 expect(p11).to.contain('Array.prototype.find');
-            });
-
-            it('does not guard the polyfills', () => {
-                expect(state.polyfillsFile).to.not.contain(`'Promise' in this`);
-                expect(state.polyfillsFile).to.not.contain(`'find' in Array.prototype`);
+                expect(p11).to.contain('Promise');
             });
 
             it('picks the correct polyfills file to load', () => {
-                expect(state.polyfillsUrl).to.equal('/polyfills.10.js');
+                expect(state.polyfillsUrl).to.equal('/polyfills.01.js');
             });
 
             it('loads the polyfill', () => {
@@ -278,6 +264,29 @@ describe('webpack-polyfill-injector', () => {
     });
 
 
+    describe('When requesting Promise and Promise.prototype.finally', () => {
+        let state; // eslint-disable-line init-declarations
+        before(async () => {
+            state = await test({
+                entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/entry.js"]}!'},
+                plugins: [new PolyfillInjectorPlugin({polyfills: ['Promise', 'Promise.prototype.finally']})],
+            });
+        });
+
+        it('strips Promise.prototype.finally when Promise gets polyfilled', () => {
+            const polyfills = state.fs.readFileSync('/polyfills.11.js', 'utf-8');
+            expect(polyfills).to.contain(`('Promise' in this)`);
+            expect(polyfills).to.not.contain(`('Promise' in this && 'finally' in Promise.prototype)`);
+        });
+
+        it('strips Promise when it is supported natively and Promise.prototype.finally gets polyfilled', () => {
+            const polyfills = state.fs.readFileSync('/polyfills.01.js', 'utf-8');
+            expect(polyfills).to.not.contain(`('Promise' in this)`);
+            expect(polyfills).to.contain(`('Promise' in this && 'finally' in Promise.prototype)`);
+        });
+    });
+
+
     describe('When requesting ten polyfills (without singleFile option)', () => {
         it('creates 1024 assets: app.js and 1023 polyfill combinations', async () => {
             const state = await test({
@@ -290,7 +299,7 @@ describe('webpack-polyfill-injector', () => {
                     'Element',
                     'Event',
                     'HTMLPictureElement',
-                    'String.prototype.contains',
+                    'String.prototype.includes',
                     'String.prototype.endsWith',
                     'Symbol',
                 ]})],
@@ -300,7 +309,7 @@ describe('webpack-polyfill-injector', () => {
             expect(assets).to.have.property('app.js');
             expect(assets).to.have.property('polyfills.0000000001.js');
             expect(assets).to.have.property('polyfills.1111111111.js');
-        });
+        }).timeout(30000);
     });
 
 
@@ -349,12 +358,6 @@ describe('webpack-polyfill-injector', () => {
                 expect(state.polyfillsFile).to.not.contain('Array.prototype.find');
                 expect(polyfills2).to.not.contain('Promise');
                 expect(polyfills2).to.contain('Array.prototype.find');
-            });
-
-            it('does not guard the polyfills', () => {
-                const polyfills2 = state.fs.readFileSync('/polyfills-1.js', 'utf-8');
-                expect(state.polyfillsFile).to.not.contain(`'Promise' in this`);
-                expect(polyfills2).to.not.contain(`'find' in Array.prototype`);
             });
 
             it('executes the "app" entry module correctly', () => {
@@ -498,6 +501,14 @@ describe('webpack-polyfill-injector', () => {
                 })).to.be.rejectedWith('You need to specify the `polyfills` option!')
             );
         });
+        describe('Invalid polyfill is specified', () => {
+            it('yields a useful error message', () =>
+                expect(compile({
+                    entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/entry.js"]}!'},
+                    plugins: [new PolyfillInjectorPlugin({polyfills: ['InvalidFoobar']})],
+                })).to.be.rejectedWith('The polyfill InvalidFoobar does not exist!')
+            );
+        });
     });
 
     describe('When using without publicPath', () => {
@@ -518,7 +529,6 @@ describe('webpack-polyfill-injector', () => {
                     done(stats.compilation.errors[0]);
                 } else {
                     expect(fs.readFileSync('/app.js', 'utf-8')).to.be.a('string')
-                        .and.not.include('undefined')
                         .and.include(`js.src = "polyfills." + polyfills.join('') + '.js';`);
                     done();
                 }
