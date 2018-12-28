@@ -1,6 +1,6 @@
 {
   "name": "webpack-polyfill-injector",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Webpack plugin to automatically inject polyfills into your bundle",
   "keywords": [
     "webpack",
