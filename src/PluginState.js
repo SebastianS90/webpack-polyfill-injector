@@ -66,9 +66,12 @@ class PluginState {
     async getPolyfillDetector(polyfill) {
         const meta = await this._polyfillLibrary.describePolyfill(polyfill);
         if (meta) {
-            return meta.detectSource;
+            if (meta.detectSource) {
+                return meta.detectSource;
+            }
+            throw new Error(`[webpack-polyfill-injector] The polyfill ${polyfill} does not have a detector! Consider sending a PR with a suitable detect.js file to polyfill-library.`);
         }
-        throw new Error(`The polyfill ${polyfill} does not exist!`);
+        throw new Error(`[webpack-polyfill-injector] The polyfill ${polyfill} does not exist!`);
     }
 }
 
