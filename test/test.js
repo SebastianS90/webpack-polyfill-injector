@@ -309,7 +309,7 @@ describe('webpack-polyfill-injector', () => {
             expect(assets).to.have.property('app.js');
             expect(assets).to.have.property('polyfills.0000000001.js');
             expect(assets).to.have.property('polyfills.1111111111.js');
-        }).timeout(30000);
+        }).timeout(60000);
     });
 
 

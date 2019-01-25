@@ -1,6 +1,6 @@
 const
     loaderUtils = require('loader-utils'),
-    PolyfillLibrary = require('polyfill-library');
+    polyfillLibrary = require('polyfill-library');
 
 class PluginState {
     constructor(compilation, options) {
@@ -10,7 +10,6 @@ class PluginState {
         this.defaultHashLength = compilation.options.output.hashDigestLength;
         this.publicPath = compilation.options.output.publicPath || '';
         this.options = options;
-        this._polyfillLibrary = new PolyfillLibrary();
     }
 
     addPolyfills(options) {
@@ -55,7 +54,7 @@ class PluginState {
         if ('Promise.prototype.finally' in features && 'Promise' in features && requiresAll) {
             delete features['Promise.prototype.finally'];
         }
-        return this._polyfillLibrary.getPolyfillString({
+        return polyfillLibrary.getPolyfillString({
             minify: false,
             unknown: 'polyfill',
             features,
@@ -64,7 +63,7 @@ class PluginState {
     }
 
     async getPolyfillDetector(polyfill) {
-        const meta = await this._polyfillLibrary.describePolyfill(polyfill);
+        const meta = await polyfillLibrary.describePolyfill(polyfill);
         if (meta) {
             if (meta.detectSource) {
                 return meta.detectSource;
