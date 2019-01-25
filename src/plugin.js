@@ -1,6 +1,7 @@
 const
     RawSource = require('webpack-sources').RawSource,
-    PluginState = require('./PluginState.js');
+    PluginState = require('./PluginState.js'),
+    {getPolyfillsSource} = require('./library.js');
 
 class PolyfillInjectorPlugin {
     constructor(options) {
@@ -30,7 +31,7 @@ class PolyfillInjectorPlugin {
                 await pluginState.iteratePolyfillSets(
                     async ({polyfills, excludes, singleFile, banner}, filename) => {
                         if (singleFile) {
-                            const source = await pluginState.getPolyfillsSource(polyfills, excludes, polyfills.length === 1);
+                            const source = await getPolyfillsSource(polyfills, excludes, polyfills.length === 1);
                             compilation.assets[filename] = new RawSource(banner + source);
                             addAsChunk(filename, compilation);
                         } else {
@@ -43,7 +44,7 @@ class PolyfillInjectorPlugin {
                                 const currentPolyfills = polyfills.filter((polyfill, i) => choice.charAt(i) === '1');
                                 const supported = polyfills.filter((polyfill, i) => choice.charAt(i) === '0');
                                 tasks.push(
-                                    pluginState.getPolyfillsSource(currentPolyfills, excludes.concat(supported), true).then((source) => {
+                                    getPolyfillsSource(currentPolyfills, excludes.concat(supported), true).then((source) => {
                                         compilation.assets[outputFile] = new RawSource(banner + source);
                                         addAsChunk(outputFile, compilation);
                                     })

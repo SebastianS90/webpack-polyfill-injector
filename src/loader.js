@@ -1,6 +1,7 @@
 const
     fs = require('fs'),
-    loaderUtils = require('loader-utils');
+    loaderUtils = require('loader-utils'),
+    {getPolyfillDetector} = require('./library.js');
 
 module.exports = async function loader(content, map, meta) {
     this.cacheable();
@@ -19,7 +20,7 @@ module.exports = async function loader(content, map, meta) {
 
         // Collect all tasks that will be run concurrently.
         const tasks = polyfills.map(
-            polyfill => pluginState.getPolyfillDetector(polyfill)
+            polyfill => getPolyfillDetector(polyfill)
         ); // -> detectors
         tasks.push(pluginState.addPolyfills(options)); // -> outputFilename
         const templateFile = require.resolve(`./injector-${options.singleFile ? 'single' : 'multi'}.js`);

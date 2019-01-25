@@ -1,6 +1,6 @@
 const
     loaderUtils = require('loader-utils'),
-    polyfillLibrary = require('polyfill-library');
+    {getPolyfillsSource} = require('./library.js');
 
 class PluginState {
     constructor(compilation, options) {
@@ -26,7 +26,7 @@ class PluginState {
             return this._filenames[index];
         }
         const newIndex = this._requestedPolyfillSets.push(encoded) - 1;
-        return this._filenames[newIndex] = this.getPolyfillsSource(options.polyfills, options.excludes, false).then(
+        return this._filenames[newIndex] = getPolyfillsSource(options.polyfills, options.excludes, false).then(
             content => loaderUtils.interpolateName(
                 {resourcePath: `./polyfills${newIndex === 0 ? '' : '-' + newIndex}.js`},
                 formatFilename(options.filename, this.defaultHashLength),
@@ -43,34 +43,6 @@ class PluginState {
                 }
             )
         );
-    }
-
-    getPolyfillsSource(polyfills, excludes, requiresAll) {
-        const flags = new Set(['always', 'gated']);
-        const features = {};
-        polyfills.forEach((polyfill) => {
-            features[polyfill] = {flags};
-        });
-        if ('Promise.prototype.finally' in features && 'Promise' in features && requiresAll) {
-            delete features['Promise.prototype.finally'];
-        }
-        return polyfillLibrary.getPolyfillString({
-            minify: false,
-            unknown: 'polyfill',
-            features,
-            excludes,
-        });
-    }
-
-    async getPolyfillDetector(polyfill) {
-        const meta = await polyfillLibrary.describePolyfill(polyfill);
-        if (meta) {
-            if (meta.detectSource) {
-                return meta.detectSource;
-            }
-            throw new Error(`[webpack-polyfill-injector] The polyfill ${polyfill} does not have a detector! Consider sending a PR with a suitable detect.js file to polyfill-library.`);
-        }
-        throw new Error(`[webpack-polyfill-injector] The polyfill ${polyfill} does not exist!`);
     }
 }
 
