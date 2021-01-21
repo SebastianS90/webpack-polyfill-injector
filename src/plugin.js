@@ -62,7 +62,12 @@ class PolyfillInjectorPlugin {
 function addAsChunk(filename, compilation) {
     const chunk = compilation.addChunk(null, null, null);
     chunk.ids = [];
-    chunk.files.push(filename);
+    if (chunk.files instanceof Set) {
+        // Webpack 5
+        chunk.files.add(filename);
+    } else {
+        chunk.files.push(filename);
+    }
 }
 
 module.exports = PolyfillInjectorPlugin;
