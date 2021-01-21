@@ -47,12 +47,12 @@ class PolyfillInjectorPlugin {
                                     getPolyfillsSource(currentPolyfills, excludes.concat(supported), true).then((source) => {
                                         compilation.assets[outputFile] = new RawSource(banner + source);
                                         addAsChunk(outputFile, compilation);
-                                    })
+                                    }),
                                 );
                             }
                             await Promise.all(tasks);
                         }
-                    }
+                    },
                 );
             });
         });

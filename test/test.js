@@ -475,14 +475,14 @@ describe('webpack-polyfill-injector', () => {
                 expect(compile({
                     entry: './test/fixtures/entry.js',
                     plugins: [new PolyfillInjectorPlugin()],
-                })).to.be.rejectedWith('The plugin must be used together with the loader!')
+                })).to.be.rejectedWith('The plugin must be used together with the loader!'),
             );
         });
         describe('Loader without plugin', () => {
             it('yields a useful error message', () =>
                 expect(compile({
                     entry: 'webpack-polyfill-injector!',
-                })).to.be.rejectedWith('The loader must be used together with the plugin!')
+                })).to.be.rejectedWith('The loader must be used together with the plugin!'),
             );
         });
         describe('No modules are specified', () => {
@@ -490,7 +490,7 @@ describe('webpack-polyfill-injector', () => {
                 expect(compile({
                     entry: 'webpack-polyfill-injector!',
                     plugins: [new PolyfillInjectorPlugin()],
-                })).to.be.rejectedWith('You need to specify the `modules` option!')
+                })).to.be.rejectedWith('You need to specify the `modules` option!'),
             );
         });
         describe('No polyfills are specified', () => {
@@ -498,7 +498,7 @@ describe('webpack-polyfill-injector', () => {
                 expect(compile({
                     entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/entry.js"]}!'},
                     plugins: [new PolyfillInjectorPlugin()],
-                })).to.be.rejectedWith('You need to specify the `polyfills` option!')
+                })).to.be.rejectedWith('You need to specify the `polyfills` option!'),
             );
         });
         describe('Invalid polyfill is specified', () => {
@@ -506,7 +506,7 @@ describe('webpack-polyfill-injector', () => {
                 expect(compile({
                     entry: {app: 'webpack-polyfill-injector?{modules:["./test/fixtures/entry.js"]}!'},
                     plugins: [new PolyfillInjectorPlugin({polyfills: ['InvalidFoobar']})],
-                })).to.be.rejectedWith('The polyfill InvalidFoobar does not exist!')
+                })).to.be.rejectedWith('The polyfill InvalidFoobar does not exist!'),
             );
         });
     });

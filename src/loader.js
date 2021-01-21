@@ -20,7 +20,7 @@ module.exports = async function loader(content, map, meta) {
 
         // Collect all tasks that will be run concurrently.
         const tasks = polyfills.map(
-            polyfill => getPolyfillDetector(polyfill)
+            polyfill => getPolyfillDetector(polyfill),
         ); // -> detectors
         tasks.push(pluginState.addPolyfills(options)); // -> outputFilename
         const templateFile = require.resolve(`./injector-${options.singleFile ? 'single' : 'multi'}.js`);
@@ -42,13 +42,13 @@ module.exports = async function loader(content, map, meta) {
         const injector = template
             .replace(
                 '__MAIN__',
-                options.modules.map(module => `\n    require(${loaderUtils.stringifyRequest(this, module)});`).join('') + '\n'
+                options.modules.map(module => `\n    require(${loaderUtils.stringifyRequest(this, module)});`).join('') + '\n',
             )
             .replace(
                 '__TESTS__',
                 options.singleFile
                     ? polyfills.map((polyfill, i) => `/* ${polyfill} */ !(${detectors[i]})`).join(' ||\n        ')
-                    : polyfills.map((polyfill, i) => `\n        /* ${polyfill} */ (${detectors[i]}) ? 0 : 1`).join(',') + '\n    '
+                    : polyfills.map((polyfill, i) => `\n        /* ${polyfill} */ (${detectors[i]}) ? 0 : 1`).join(',') + '\n    ',
             )
             .replace(
                 '__SRC__',
@@ -56,7 +56,7 @@ module.exports = async function loader(content, map, meta) {
                     options.singleFile
                         ? outputFilename
                         : outputFilename.replace(/\.js$/, '.') // xxxx.js appended dynamically by injector
-                ))
+                )),
             );
 
         callback(null, injector, null); // eslint-disable-line callback-return
@@ -72,7 +72,7 @@ function getLoaderOptions(pluginState, loaderOptions) {
             filename: pluginState.defaultFilename,
         },
         pluginState.options,
-        loaderOptions
+        loaderOptions,
     );
 
     if (typeof options.modules === 'string') {
