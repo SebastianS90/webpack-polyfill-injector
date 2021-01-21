@@ -353,11 +353,16 @@ describe('webpack-polyfill-injector', () => {
             });
 
             it('does not mix the polyfill configurations', () => {
-                const polyfills2 = state.fs.readFileSync('/polyfills-1.js', 'utf-8');
-                expect(state.polyfillsFile).to.contain('Promise');
-                expect(state.polyfillsFile).to.not.contain('Array.prototype.find');
-                expect(polyfills2).to.not.contain('Promise');
-                expect(polyfills2).to.contain('Array.prototype.find');
+                const firstFile = state.fs.readFileSync('/polyfills.js', 'utf-8');
+                const secondFile = state.fs.readFileSync('/polyfills-1.js', 'utf-8');
+                // The file order changes between Webpack 4 and 5,
+                // so assume the state.polyfillsUrl will point to the app polyfills…
+                const appPolyfills = state.polyfillsUrl === '/polyfills.js' ? firstFile : secondFile;
+                const otherPolyfills = state.polyfillsUrl === '/polyfills.js' ? secondFile : firstFile;
+                expect(appPolyfills).to.contain('Promise');
+                expect(appPolyfills).to.not.contain('Array.prototype.find');
+                expect(otherPolyfills).to.not.contain('Promise');
+                expect(otherPolyfills).to.contain('Array.prototype.find');
             });
 
             it('executes the "app" entry module correctly', () => {
@@ -529,7 +534,7 @@ describe('webpack-polyfill-injector', () => {
                     done(stats.compilation.errors[0]);
                 } else {
                     expect(fs.readFileSync('/app.js', 'utf-8')).to.be.a('string')
-                        .and.include(`js.src = "polyfills." + polyfills.join('') + '.js';`);
+                        .and.match(/js.src = "(auto)?polyfills." \+ polyfills.join\(''\) \+ '.js';/);
                     done();
                 }
             });
