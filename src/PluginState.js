@@ -30,7 +30,7 @@ class PluginState {
             content => loaderUtils.interpolateName(
                 {resourcePath: `./polyfills${newIndex === 0 ? '' : '-' + newIndex}.js`},
                 formatFilename(options.filename, this.defaultHashLength),
-                {content}
+                {content},
             ));
     }
 
@@ -40,8 +40,8 @@ class PluginState {
                 async (encoded, i) => {
                     const filename = await this._filenames[i];
                     return iterator(JSON.parse(encoded), filename);
-                }
-            )
+                },
+            ),
         );
     }
 }

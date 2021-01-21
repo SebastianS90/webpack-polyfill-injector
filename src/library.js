@@ -6,6 +6,7 @@ async function getPolyfillDetector(polyfill) {
         if (meta.detectSource) {
             return meta.detectSource;
         }
+        // eslint-disable-next-line max-len
         throw new Error(`[webpack-polyfill-injector] The polyfill ${polyfill} does not have a detector! Consider sending a PR with a suitable detect.js file to polyfill-library.`);
     }
     throw new Error(`[webpack-polyfill-injector] The polyfill ${polyfill} does not exist!`);
